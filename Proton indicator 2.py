@@ -1,23 +1,35 @@
 from xyz import read_xyz, write_xyz
 # xyz read/write functionality from https://github.com/pele-python/pele/blob/master/pele/utils/xyz.py
 import numpy as np
+dist = []
+def donorf(h_coords, o_coords):
+    for atom in o_coords:
+        for h_atom in h_coords:
+            dist = []
+            all_dist = np.subtract(o_coords, h_coords)
+            all_distsq = all_dist ** 2
+            dist = ((np.sum(all_distsq, axis=2)) ** 0.5)
+            bonds = 0
+            donor = []
+            for count, unit in enumerate(dist):
+                bonds = len([1 for h in unit if h <= 1])
+                if bonds == 3:
+                    donor = (o_coords[count])
+    print("Donor coordinates:", donor)
+    acceptorf(donor, o_coords)
+
+def distance(h_coords, o_coords):
+    global dist
+    for atom in o_coords:
+        for h_atom in h_coords:
+            dist = []
+            all_dist = np.subtract(o_coords, h_coords)
+            all_distsq = all_dist ** 2
+            dist = ((np.sum(all_distsq, axis=1)) ** 0.5)
 def main():
-    infile_name = 'h5o2_2cc_scan_sum.xyz'
+    infile_name = 'h5o2_test.xyz'
     # Variables needed for calculations
     all_steps = []
-    h_x = 0
-    h_y = 0
-    h_z = 0
-    o1_x = 0
-    o1_y = 0
-    o1_z = 0
-    o2_x = 0
-    o2_y = 0
-    o2_z = 0
-    disto1_square = 0
-    dist_o1 = 0
-    disto2_square = 0
-    dist_o2 = 0
     proton_coords = []
     np.asarray(proton_coords)
     with open(infile_name) as file:
@@ -26,29 +38,8 @@ def main():
                 all_steps.append(read_xyz(file))
             except ValueError:
                 break
-        for i in range(0, 880):
-            h_x = all_steps[i].coords[1, 0]
-            h_y = all_steps[i].coords[1, 1]
-            h_z = all_steps[i].coords[1, 2]
-            o1_x = all_steps[i].coords[0, 0]
-            o1_y = all_steps[i].coords[0, 1]
-            o1_z = all_steps[i].coords[0, 2]
-            disto1_square = (((((h_x)-(o1_x))**2)+((h_y)-(o1_y))**2)+((h_z)-(o1_z))**2)
-            dist_o1 = disto1_square**.5
-            print('The distance from first oxygen atom is', dist_o1)
-            o2_x = all_steps[i].coords[4, 0]
-            o2_y = all_steps[i].coords[4, 1]
-            o2_z = all_steps[i].coords[4, 2]
-            disto2_square = (((((h_x) - (o2_x))**2) + ((h_y) - (o2_y))**2) + ((h_z) - (o2_z))**2)
-            dist_o2 = disto2_square**.5
-            print('The distance from second oxygen atom is', dist_o2)
-            if dist_o1 < 1:
-                proton_coords.append([o1_x, o1_y, o1_z])
-            elif dist_o1 > 1 and dist_o2 > 1:
-                proton_coords.append([h_x, h_y, h_z])
-            elif dist_o2 < 1:
-                proton_coords.append([o2_x, o2_y, o2_z])
-        print('Proton indicator list:', proton_coords)
+        for step in all_steps:
+            oxygen(step)
     outfile_name = "output_test.xyz"
     with open(outfile_name, 'w') as out_file:
         for step, proton in zip(all_steps, proton_coords):
@@ -57,9 +48,29 @@ def main():
                 coords_out += atom
             coords_out += (proton, )
             coords_out = np.asarray(coords_out)
-            atomtypes_out = step.atomtypes + ["He", ]
+            atomtypes_out = step.atomtypes + ["DUM", ]
             title_out = step.title
             write_xyz(out_file, coords_out, title_out, atomtypes_out)
+def oxygen(step):
+    # Find oxygen atoms in step
+    o_coords = []
+    h_coords = []
+    for ox_index, (ox, coords) in enumerate(zip(step.atomtypes, step.coords)):
+        dist_between = []
+        if ox == "O":
+            o_coords.append([step.coords[ox_index]])
+            # Find bonded hydrogen atoms in step
+    for h_index, (h, coords) in enumerate(zip(step.atomtypes, step.coords)):
+        if h == "H":
+            h_coords.append(coords)
+    donorf(h_coords, o_coords)
+def acceptorf(donor, o_coords):
+    acceptor = []
+    for count, coords in enumerate(o_coords):
+        distance(donor, coords)
+        if dist <= 2.8 and dist > 0:
+            acceptor.append(o_coords[count])
+        print("Acceptor:", acceptor)
 
 
 # --------------------------------------------------------------------
